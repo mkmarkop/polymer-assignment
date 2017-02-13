@@ -1,0 +1,159 @@
+<link rel="import" href="../bower_components/iron-icons/iron-icons.html">
+<link rel="import" href="../bower_components/polymer/polymer.html">
+<link rel="import" href="../bower_components/paper-dialog/paper-dialog.html">
+<link rel="import" href="../bower_components/paper-input/paper-input.html">
+<link rel="import" href="../bower_components/vaadin-date-picker/vaadin-date-picker.html">
+<link rel="import" href="../bower_components/paper-input/paper-textarea.html">
+<link rel="import" href="../bower_components/paper-fab/paper-fab.html">
+<link rel="import" href="../bower_components/iron-icons/iron-icons.html">
+<link rel="import" href="../bower_components/iron-pages/iron-pages.html">
+<link rel="import" href="../bower_components/iron-localstorage/iron-localstorage.html">
+<link rel="import" href="shared-styles.html">
+<link rel="import" href="my-reminder.html">
+
+<dom-module id="my-reminders">
+  <!-- Defines the element's style and local DOM -->
+  <template>
+    <style include="shared-styles">
+      paper-fab {
+        position: fixed;
+        right: 25px;
+        bottom: 30px;
+      }
+
+      .centered > paper-button {
+        background: var(--paper-light-blue-500);
+        color: white;
+        width: 30%;
+        margin-top: 20px;
+      }
+
+      .centered {
+        @apply(--layout-horizontal);
+        @apply(--layout-center-justified);
+      }
+    </style>
+
+    <iron-localstorage name="my-app-storage" value="{{reminders}}"
+     on-iron-localstorage-load-empty="initStorage"></iron-localstorage>
+
+    <iron-pages id="iPages" selected="1">
+      <div class="card">
+        <paper-input  id="r-title" label="Reminder title" required auto-validate
+                      pattern="^[^\s].*$" value="{{newReminder.title}}"
+                      error-message="This field must be non-empty!"></paper-input>
+        <paper-textarea id="r-desc" label="Reminder description" required auto-validate
+                      pattern="^[^\s].*$" value="{{newReminder.desc}}"
+                      error-message="This field must be non-empty!"></paper-textarea>
+        <vaadin-date-picker id="r-date" label="Due date" value="{{newReminder.date}}"
+                      required></vaadin-date-picker>
+        <div class="centered">
+          <paper-button raised on-tap="mainPage">Cancel</paper-button>
+          <paper-button raised autofocus on-tap="addReminder">Add reminder</paper-button>
+        </div>
+      </div>
+
+      <div>
+        <template is="dom-repeat" items="{{reminders}}" sort="compareReminders">
+          <my-reminder title="{{item.title}}" date="{{item.date}}">{{item.desc}}</my-reminder>
+        </template>
+
+        <paper-fab icon="add-circle" on-tap="nextPage"></paper-fab>
+      </div>
+    </iron-pages>
+
+  </template>
+
+  <!-- Creates the element's prototype and registers it -->
+  <script>
+    function checkInput(context, reminder) {
+      return isValid(context, reminder, 'title') &&
+              isValid(context, reminder, 'desc') &&
+              isValid(context, reminder, 'date');
+    }
+
+    function isValid(context, reminder, prop) {
+      if (!reminder[prop]) {
+        reminder[prop] = null;
+        context['r-' + prop].invalid = true;
+        return false;
+      }
+
+      return true;
+    }
+
+    Polymer({
+      is: 'my-reminders',
+
+      properties: {
+        newReminder: {
+          type: Object,
+          value: function() {
+            return {};
+          }
+        },
+        reminders: {
+          type: Array,
+          value: function() { return []; }
+        }
+      },
+
+      initStorage: function() {
+        this.reminders = [];
+      },
+
+      mainPage: function(event) {
+        this.setReminder({});
+        this.$.iPages.selectNext();
+      },
+
+      setReminder: function(reminder) {
+        this.newReminder = reminder;
+      },
+
+      addReminder: function() {
+        var rem = this.newReminder;
+
+        if (!checkInput(this.$, rem)) {
+          return;
+        }
+
+        rem.title = rem.title.trim();
+        rem.desc = rem.desc.trim();
+        rem.date = Date.parse(rem.date);
+
+        if (!checkInput(this.$, rem)) {
+          return;
+        }
+
+        rem.date = this.formatDate(new Date(rem.date));
+
+        this.push('reminders', rem);
+        this.setReminder({});
+
+        this.nextPage();
+      },
+
+      compareReminders: function(a, b) {
+        timeA = new Date(a.date).getTime();
+        timeB = new Date(b.date).getTime();
+
+        if (timeA === timeB) {
+          return 0;
+        } else if (timeA > timeB) {
+          return 1;
+        } else {
+          return -1;
+        }
+      },
+
+      formatDate: function(date) {
+        return new Date(date).toDateString();
+      },
+
+      nextPage: function() {
+        this.$.iPages.selectNext();
+      }
+    });
+  </script>
+</dom-module>

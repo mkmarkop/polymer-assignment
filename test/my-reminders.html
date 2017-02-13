@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, minimum-scale=1, initial-scale=1, user-scalable=yes">
+
+    <title>my-reminders</title>
+
+    <script src="../bower_components/webcomponentsjs/webcomponents-lite.js"></script>
+    <script src="../bower_components/web-component-tester/browser.js"></script>
+
+    <!-- Import the element to test -->
+    <link rel="import" href="../src/my-reminders.html">
+  </head>
+  <body>
+    <test-fixture id="reminders">
+      <template is="dom-template">
+        <my-reminders></my-reminders>
+      </template>
+    </test-fixture>
+
+    <script>
+      function createReminder(title, desc, date) {
+        return {
+          title: title,
+          desc: desc,
+          date: date
+        };
+      }
+
+      function updateReminders(reminders, newReminder) {
+        reminders.setReminder(newReminder);
+        reminders.addReminder();
+      }
+
+      suite('my-reminders tests', function() {
+        var reminders;
+
+        setup(function(done) {
+          reminders = fixture('reminders');
+          window.localStorage.clear();
+          flush(function() {
+            done();
+          });
+        });
+
+        suiteTeardown(function() {
+          window.localStorage.clear();
+        });
+
+        test('Should be able to grab my-reminders and its elements', function() {
+          expect(reminders).to.be.ok;
+          expect(reminders.$$('paper-fab')).to.be.ok;
+          expect(reminders.$$('iron-pages')).to.be.ok;
+
+          expect(window.localStorage).not.to.be.empty;
+          expect(window.localStorage).to.have.property('my-app-storage');
+        })
+
+        test('Initially there should not be any reminders', function() {
+          expect(reminders.$$('my-reminder')).not.to.be.ok;
+          expect(reminders.$$('paper-fab')).to.be.visible;
+        });
+
+        test('User should be able to switch to reminder-form', function() {
+          var button = reminders.$$('paper-fab');
+          var iPages = reminders.$$('iron-pages');
+          var current = iPages.selected;
+
+          button.click();
+          expect(iPages.selected).not.to.equal(current);
+          expect(reminders.$$('paper-fab')).not.to.be.visible;
+        });
+
+        test('Newly added reminder should appear in HTML', function(done) {
+          var reminder = createReminder("Title1", "Desc1", "2016-01-01");
+
+          expect(reminders.$$('my-reminder')).not.to.be.ok;
+          updateReminders(reminders, reminder);
+          expect(reminders.reminders.length).to.equal(1);
+
+          flush(function() {
+            var rElement = reminders.$$('my-reminder');
+            expect(rElement).to.be.ok;
+            expect(rElement).to.have.property('title');
+            expect(rElement.title).to.equal(reminder.title);
+            expect(rElement).to.have.property('date');
+            expect(rElement.date).to.equal(reminders.formatDate(reminder.date));
+            done();
+          });
+        });
+
+        test('Newly added reminder should appear in localStorage', function(done) {
+          var reminder = createReminder("Title1", "Desc1", "2016-01-01");
+
+          expect(reminders.reminders.length).to.equal(0);
+          updateReminders(reminders, reminder);
+          expect(reminders.reminders.length).to.equal(1);
+
+          flush(function() {
+            var remList = JSON.parse(window.localStorage.getItem('my-app-storage'));
+            expect(remList.length).to.equal(1);
+            expect(remList[0]).to.have.property('title');
+            expect(remList[0].title).to.equal(reminder.title);
+            expect(remList[0]).to.have.property('desc');
+            expect(remList[0].desc).to.equal(reminder.desc);
+            expect(remList[0]).to.have.property('date');
+            expect(remList[0].date).to.equal(reminders.formatDate(reminder.date));
+            done();
+          });
+
+        });
+
+        test('Null title should not be accepted', function() {
+          var reminder = createReminder(null, "Desc1", "2016-01-01");
+
+          expect(reminders.reminders.length).to.equal(0);
+          updateReminders(reminders, reminder);
+          expect(reminders.reminders.length).to.equal(0);
+        });
+
+        test('Null description should not be accepted', function() {
+          var reminder = createReminder("Title1", null, "2016-01-01");
+
+          expect(reminders.reminders.length).to.equal(0);
+          updateReminders(reminders, reminder);
+          expect(reminders.reminders.length).to.equal(0);
+        });
+
+        test('Null date should not be accepted', function() {
+          var reminder = createReminder("Title1", "Desc1", null);
+
+          expect(reminders.reminders.length).to.equal(0);
+          updateReminders(reminders, reminder);
+          expect(reminders.reminders.length).to.equal(0);
+        });
+
+        test('Empty title should not be accepted', function() {
+          var reminder = createReminder(" ", "Desc1", "2016-01-01");
+
+          expect(reminders.reminders.length).to.equal(0);
+          updateReminders(reminders, reminder);
+          expect(reminders.reminders.length).to.equal(0);
+        });
+
+        test('Empty description should not be accepted', function() {
+          var reminder = createReminder("Title1", " ", "2016-01-01");
+
+          expect(reminders.reminders.length).to.equal(0);
+          updateReminders(reminders, reminder);
+          expect(reminders.reminders.length).to.equal(0);
+        });
+
+        test('Empty date should not be accepted', function() {
+          var reminder = createReminder("Title1", "Desc1", " ");
+
+          expect(reminders.reminders.length).to.equal(0);
+          updateReminders(reminders, reminder);
+          expect(reminders.reminders.length).to.equal(0);
+        });
+
+        test('Non-ISO date should not be accepted', function() {
+          var reminder = createReminder("Title1", "Desc1", "2016/01/01");
+
+          expect(reminders.reminders.length).to.equal(0);
+          updateReminders(reminders, reminder);
+          expect(reminders.reminders.length).to.equal(0);
+        });
+
+        test('Reminders should be sorted ascending by the due date', function(done) {
+          // Due date is Feburary
+          var remFeb = createReminder("Title1", "Desc1", "2017-02-01");
+          // Due date is January
+          var remJan = createReminder("Title2", "Desc2", "2017-01-01");
+
+          expect(reminders.reminders.length).to.equal(0);
+          updateReminders(reminders, remFeb);
+          updateReminders(reminders, remJan);
+          expect(reminders.reminders.length).to.equal(2);
+
+          flush(function() {
+            var rElements = Polymer.dom(reminders.root).querySelectorAll('my-reminder');
+            expect(rElements.length).to.equal(2);
+            expect(rElements[0].title).to.equal(remJan.title);
+            expect(rElements[1].title).to.equal(remFeb.title);
+          });
+
+          done();
+        });
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, minimum-scale=1, initial-scale=1, user-scalable=yes">
+
+    <title>my-reminder</title>
+
+    <script src="../bower_components/webcomponentsjs/webcomponents-lite.js"></script>
+    <script src="../bower_components/web-component-tester/browser.js"></script>
+
+    <!-- Import the element to test -->
+    <link rel="import" href="../src/my-reminder.html">
+  </head>
+  <body>
+    <test-fixture id="basic">
+      <template is="dom-template">
+        <my-reminder></my-reminder>
+      </template>
+    </test-fixture>
+
+    <script>
+      suite('my-view1 tests', function() {
+        var my_reminder;
+
+        setup(function() {
+          my_reminder = fixture('basic');
+        });
+
+        test('Should have basic properties: title and date', function() {
+          expect(my_reminder).to.have.property('title');
+          expect(my_reminder).to.have.property('date');
+        });
+
+        test('Change of title property should be visible', function(done) {
+          my_reminder.title = "Must-do";
+
+          flush(function() {
+            expect(Polymer.dom(my_reminder.root).textContent).to.contain("Must-do");
+            done();
+          });
+        });
+
+        test('Change of date property should be visible', function(done) {
+          my_reminder.date = "2016-01-01";
+
+          flush(function() {
+            expect(Polymer.dom(my_reminder.root).textContent).to.contain("2016-01-01");
+            done();
+          });
+        });
+
+        test('Change of both properties should be visible', function(done) {
+          my_reminder.title = "Must-do";
+          my_reminder.date = "2016-01-01";
+
+          flush(function() {
+            expect(Polymer.dom(my_reminder.root).textContent).to.contain("Must-do");
+            expect(Polymer.dom(my_reminder.root).textContent).to.contain("2016-01-01");
+            done();
+          });
+        });
+
+      });
+    </script>
+  </body>
+</html>
